@@ -11,7 +11,7 @@ import { useBuyerData } from '@/hooks/useBuyerData';
 export function BuyerDashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { orders, wallet, disputes, loading, error } = useBuyerData();
+  const { orders, wallet, disputes, loading, error, isConnected } = useBuyerData();
   const [activeTab, setActiveTab] = useState<'purchases' | 'wallet' | 'disputes' | 'activity'>('purchases');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -109,7 +109,7 @@ export function BuyerDashboard() {
         {/* Content Area */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8">
           <div className="max-w-7xl mx-auto">
-            {activeTab === 'purchases' && <BuyerOrders orders={orders} loading={loading} error={error} />}
+            {activeTab === 'purchases' && <BuyerOrders orders={orders} loading={loading} error={error} isConnected={isConnected} />}
             {activeTab === 'wallet' && <BuyerWallet wallet={wallet} loading={loading} error={error} />}
             {activeTab === 'disputes' && <BuyerDisputes disputes={disputes} loading={loading} error={error} />}
             {activeTab === 'activity' && <BuyerActivity />}

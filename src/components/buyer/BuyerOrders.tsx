@@ -1,4 +1,4 @@
-import { Search, Eye, Loader } from 'lucide-react';
+import { Search, Eye, Loader, WifiOff, Radio } from 'lucide-react';
 import { useState } from 'react';
 import StatusBadge from '../StatusBadge';
 
@@ -6,10 +6,12 @@ interface BuyerOrdersProps {
   orders: any[];
   loading: boolean;
   error: string | null;
+  isConnected?: boolean;
 }
 
-export function BuyerOrders({ orders, loading, error }: BuyerOrdersProps) {
+export function BuyerOrders({ orders, loading, error, isConnected = false }: BuyerOrdersProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
 
   const filteredOrders = orders.filter(order =>
     order.itemName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -40,6 +42,24 @@ export function BuyerOrders({ orders, loading, error }: BuyerOrdersProps) {
         <div>
           <h2 className="text-2xl font-bold text-gray-800">My Purchases</h2>
           <p className="text-sm text-gray-500">{orders.length} total orders</p>
+        </div>
+        {/* Live Connection Status */}
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+          isConnected 
+            ? 'bg-green-100 text-green-700 border border-green-200' 
+            : 'bg-gray-100 text-gray-500 border border-gray-200'
+        }`}>
+          {isConnected ? (
+            <>
+              <Radio size={14} className="animate-pulse" />
+              Live Updates
+            </>
+          ) : (
+            <>
+              <WifiOff size={14} />
+              Offline
+            </>
+          )}
         </div>
       </div>
 
@@ -74,9 +94,22 @@ export function BuyerOrders({ orders, loading, error }: BuyerOrdersProps) {
           <tbody className="divide-y divide-gray-100">
             {filteredOrders.length > 0 ? (
               filteredOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50 transition">
+                <tr 
+                  key={order.id} 
+                  className={`transition-all duration-500 ${
+                    order.lastUpdateLive 
+                      ? 'bg-green-50 animate-pulse' 
+                      : 'hover:bg-gray-50'
+                  } ${selectedOrder === order.id ? 'ring-2 ring-green-500 ring-inset' : ''}`}
+                  onClick={() => setSelectedOrder(order.id === selectedOrder ? null : order.id)}
+                >
                   <td className="px-6 py-4 font-mono text-sm font-medium text-gray-900">
-                    {order.id.slice(0, 8)}...
+                    <div className="flex items-center gap-2">
+                      {order.lastUpdateLive && (
+                        <span className="w-2 h-2 bg-green-500 rounded-full animate-ping" />
+                      )}
+                      {order.id.slice(0, 8)}...
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-600">
                     {order.itemName}
@@ -91,10 +124,22 @@ export function BuyerOrders({ orders, loading, error }: BuyerOrdersProps) {
                     KES {order.amount.toLocaleString()}
                   </td>
                   <td className="px-6 py-4">
-                    <StatusBadge status={order.status as any} />
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={order.status as any} />
+                      {order.lastUpdateLive && (
+                        <span className="text-xs text-green-600 font-medium">Just updated!</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    {new Date(order.createdAt).toLocaleDateString()}
+                    <div>
+                      <p>{new Date(order.createdAt).toLocaleDateString()}</p>
+                      {order.updatedAt !== order.createdAt && (
+                        <p className="text-xs text-gray-400">
+                          Updated: {new Date(order.updatedAt).toLocaleTimeString()}
+                        </p>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition" title="View Details">
@@ -112,6 +157,94 @@ export function BuyerOrders({ orders, loading, error }: BuyerOrdersProps) {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Order Timeline - Show when order is selected */}
+      {selectedOrder && (
+        <OrderTimeline 
+          order={filteredOrders.find(o => o.id === selectedOrder)} 
+          onClose={() => setSelectedOrder(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+interface OrderTimelineProps {
+  order: any;
+  onClose: () => void;
+}
+
+function OrderTimeline({ order, onClose }: OrderTimelineProps) {
+  if (!order) return null;
+
+  const steps = [
+    { status: 'PENDING', label: 'Order Placed', icon: '📝' },
+    { status: 'PAID', label: 'Payment Received', icon: '💰' },
+    { status: 'SHIPPED', label: 'Shipped', icon: '📦' },
+    { status: 'DELIVERED', label: 'Delivered', icon: '🚚' },
+    { status: 'CONFIRMED', label: 'Confirmed', icon: '✅' },
+    { status: 'COMPLETED', label: 'Completed', icon: '🎉' },
+  ];
+
+  const currentIndex = steps.findIndex(s => s.status === order.status);
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 animate-in slide-in-from-top-2">
+      <div className="flex justify-between items-start mb-6">
+        <div>
+          <h3 className="text-lg font-bold text-gray-800">Order Timeline</h3>
+          <p className="text-sm text-gray-500">Track your order progress in real-time</p>
+        </div>
+        <button 
+          onClick={onClose}
+          className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="relative">
+        {/* Progress Line */}
+        <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200" />
+        <div 
+          className="absolute left-6 top-0 w-0.5 bg-green-500 transition-all duration-500"
+          style={{ height: `${Math.max(0, (currentIndex / (steps.length - 1)) * 100)}%` }}
+        />
+
+        {/* Steps */}
+        <div className="space-y-6">
+          {steps.map((step, index) => {
+            const isComplete = index <= currentIndex;
+            const isCurrent = index === currentIndex;
+
+            return (
+              <div key={step.status} className="flex items-center gap-4 relative">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl z-10 transition-all ${
+                  isComplete 
+                    ? 'bg-green-500 text-white shadow-lg shadow-green-200' 
+                    : 'bg-gray-100 text-gray-400'
+                } ${isCurrent ? 'ring-4 ring-green-100 animate-pulse' : ''}`}>
+                  {step.icon}
+                </div>
+                <div className="flex-1">
+                  <p className={`font-semibold ${isComplete ? 'text-gray-900' : 'text-gray-400'}`}>
+                    {step.label}
+                  </p>
+                  {isCurrent && (
+                    <p className="text-sm text-green-600 font-medium flex items-center gap-1">
+                      <Radio size={12} className="animate-pulse" />
+                      Current status
+                    </p>
+                  )}
+                </div>
+                {isComplete && (
+                  <span className="text-green-500">✓</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/services/api';
+import { useOrderTracking, OrderUpdate } from './useOrderTracking';
 
 export interface BuyerOrder {
   id: string;
@@ -9,6 +10,7 @@ export interface BuyerOrder {
   seller: { name: string; phone: string };
   createdAt: string;
   updatedAt: string;
+  lastUpdateLive?: boolean; // Flag for animation
 }
 
 export interface BuyerDispute {
@@ -38,9 +40,47 @@ export function useBuyerData() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Handle real-time order updates
+  const handleOrderUpdate = useCallback((update: OrderUpdate) => {
+    setOrders(prevOrders => 
+      prevOrders.map(order => 
+        order.id === update.orderId
+          ? { 
+              ...order, 
+              status: update.status, 
+              updatedAt: update.timestamp,
+              lastUpdateLive: true 
+            }
+          : order
+      )
+    );
+
+    // Clear the live update flag after animation
+    setTimeout(() => {
+      setOrders(prevOrders =>
+        prevOrders.map(order =>
+          order.id === update.orderId
+            ? { ...order, lastUpdateLive: false }
+            : order
+        )
+      );
+    }, 3000);
+  }, []);
+
+  const { isConnected, trackOrders, recentUpdates } = useOrderTracking({
+    onOrderUpdate: handleOrderUpdate,
+  });
+
   useEffect(() => {
     fetchAllData();
   }, []);
+
+  // Track all orders when they're loaded
+  useEffect(() => {
+    if (orders.length > 0 && isConnected) {
+      trackOrders(orders.map(o => o.id));
+    }
+  }, [orders.length, isConnected, trackOrders]);
 
   const fetchAllData = async () => {
     try {
@@ -74,5 +114,14 @@ export function useBuyerData() {
     }
   };
 
-  return { orders, disputes, wallet, loading, error, refetch: fetchAllData };
+  return { 
+    orders, 
+    disputes, 
+    wallet, 
+    loading, 
+    error, 
+    refetch: fetchAllData,
+    isConnected,
+    recentUpdates,
+  };
 }
