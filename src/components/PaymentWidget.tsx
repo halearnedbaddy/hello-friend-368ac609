@@ -54,15 +54,15 @@ export function PaymentWidget({ transactionId, amount, onPaymentSuccess }: Payme
         const response = await api.request('/api/v1/payments/check-status', {
           method: 'POST',
           body: { transactionId },
-          requireAuth: true,
+          requireAuth: false,
         });
 
         const txData = response.data as { status: string };
-        if (txData.status === 'PAYMENT_CONFIRMED') {
+        if (txData.status === 'PAID') {
           setPaymentStatus('success');
           clearInterval(pollInterval);
           onPaymentSuccess?.();
-        } else if (txData.status === 'PAYMENT_FAILED') {
+        } else if (txData.status === 'CANCELLED') {
           setPaymentStatus('failed');
           clearInterval(pollInterval);
         }
@@ -76,16 +76,16 @@ export function PaymentWidget({ transactionId, amount, onPaymentSuccess }: Payme
   };
 
   return (
-    <div className="bg-white rounded-lg p-6 border border-gray-200">
+    <div className="bg-card rounded-lg p-6 border border-border">
       <div className="flex items-center gap-2 mb-4">
-        <Smartphone className="text-green-600" size={20} />
-        <h3 className="font-bold text-lg">Pay with M-Pesa</h3>
+        <Smartphone className="text-primary" size={20} />
+        <h3 className="font-bold text-lg text-foreground">Pay with M-Pesa</h3>
       </div>
 
       {paymentStatus === 'idle' && (
         <form onSubmit={handleSTKPush} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Phone Number (254XXXXXXXXX)
             </label>
             <input
@@ -94,17 +94,17 @@ export function PaymentWidget({ transactionId, amount, onPaymentSuccess }: Payme
               onChange={(e) => setPhoneNumber(e.target.value)}
               placeholder="2547xxxxxxxx"
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-input rounded-lg bg-background text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
             />
           </div>
 
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <p className="text-sm text-gray-600">Amount:</p>
-            <p className="text-2xl font-bold text-gray-900">KES {amount.toLocaleString()}</p>
+          <div className="bg-muted p-3 rounded-lg">
+            <p className="text-sm text-muted-foreground">Amount:</p>
+            <p className="text-2xl font-bold text-foreground">KES {amount.toLocaleString()}</p>
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded">
               {error}
             </div>
           )}
@@ -112,7 +112,7 @@ export function PaymentWidget({ transactionId, amount, onPaymentSuccess }: Payme
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold py-3 rounded-lg transition flex items-center justify-center gap-2"
+            className="w-full bg-primary hover:bg-primary/90 disabled:bg-muted text-primary-foreground font-bold py-3 rounded-lg transition flex items-center justify-center gap-2"
           >
             {isLoading ? (
               <>
@@ -129,28 +129,28 @@ export function PaymentWidget({ transactionId, amount, onPaymentSuccess }: Payme
       {paymentStatus === 'pending' && (
         <div className="text-center py-8">
           <div className="inline-block">
-            <Loader size={40} className="text-green-600 animate-spin mb-4" />
+            <Loader size={40} className="text-primary animate-spin mb-4" />
           </div>
-          <p className="text-gray-700 font-medium">Waiting for PIN prompt on {phoneNumber}</p>
-          <p className="text-sm text-gray-500 mt-2">Check your phone for the M-Pesa PIN prompt</p>
+          <p className="text-foreground font-medium">Waiting for PIN prompt on {phoneNumber}</p>
+          <p className="text-sm text-muted-foreground mt-2">Check your phone for the M-Pesa PIN prompt</p>
         </div>
       )}
 
       {paymentStatus === 'success' && (
-        <div className="bg-green-50 border border-green-200 p-6 rounded-lg text-center">
+        <div className="bg-primary/10 border border-primary/20 p-6 rounded-lg text-center">
           <div className="text-4xl mb-2">✅</div>
-          <p className="text-green-700 font-bold">Payment Successful!</p>
-          <p className="text-sm text-green-600 mt-2">Transaction ID: {transactionId}</p>
+          <p className="text-primary font-bold">Payment Successful!</p>
+          <p className="text-sm text-primary/80 mt-2">Transaction ID: {transactionId}</p>
         </div>
       )}
 
       {paymentStatus === 'failed' && (
-        <div className="bg-red-50 border border-red-200 p-6 rounded-lg text-center">
+        <div className="bg-destructive/10 border border-destructive/20 p-6 rounded-lg text-center">
           <div className="text-4xl mb-2">❌</div>
-          <p className="text-red-700 font-bold">Payment Failed</p>
+          <p className="text-destructive font-bold">Payment Failed</p>
           <button
             onClick={() => setPaymentStatus('idle')}
-            className="mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+            className="mt-4 bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold py-2 px-4 rounded"
           >
             Try Again
           </button>
