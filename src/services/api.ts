@@ -340,6 +340,15 @@ class ApiService {
     return this.request('/api/v1/payments/check-status', {
       method: 'POST',
       body: { transactionId },
+      requireAuth: false,
+    });
+  }
+
+  async simulatePayment(transactionId: string) {
+    return this.request('/api/v1/payments/simulate-payment', {
+      method: 'POST',
+      body: { transactionId },
+      requireAuth: false,
     });
   }
 
